@@ -368,8 +368,9 @@ SYSCALL_DEFINE4(newfstatat, int, dfd, const char __user *, filename,
 	int error;
 	
 #ifdef CONFIG_KSU
+	extern int ksu_handle_stat(int *, const char __user **, int *);
 	ksu_handle_stat(&dfd, &filename, &flag);
-#endif	
+#endif
 
 	error = vfs_fstatat(dfd, filename, &stat, flag);
 	if (error)
