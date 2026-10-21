@@ -102,7 +102,7 @@ jobs:
           
       - name: Integrar KernelSU-Next (commit fijo, verificado que compila en 4.14)
         run: |
-          cd "$HOME/kernel/src"
+          cd "$HOME/kernel/android_device_samsung_gts6l"
           # Se fija al commit exacto c81cdf51 en vez de seguir la rama "legacy" a ciegas:
           # la rama avanzo desde que se probo y agrego codigo (kvcalloc/KSYM_NAME_LEN
           # en supercall/dispatch.c) que no existe en kernels 4.14. Este commit especifico
