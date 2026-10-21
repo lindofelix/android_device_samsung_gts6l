@@ -99,7 +99,12 @@ jobs:
         run: |
           cd "$HOME/kernel/android_device_samsung_gts6l"
           bash fix-symlinks.sh
-
+          
+      - name: Integrar KernelSU-Next (rama legacy)
+        run: |
+          cd "$HOME/kernel/android_device_samsung_gts6l"
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s legacy
+          
       - name: Compilar kernel
         run: |
           cd "$HOME/kernel/android_device_samsung_gts6l"
