@@ -107,7 +107,7 @@ jobs:
           # la rama avanzo desde que se probo y agrego codigo (kvcalloc/KSYM_NAME_LEN
           # en supercall/dispatch.c) que no existe en kernels 4.14. Este commit especifico
           # SI compila limpio, verificado.
-          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s c81cdf51c3bb606836c6fc9a7cc858053eb0bc62
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s legacy
           
       - name: Compilar kernel
         run: |
