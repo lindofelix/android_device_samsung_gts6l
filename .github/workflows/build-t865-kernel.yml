@@ -99,7 +99,16 @@ jobs:
         run: |
           cd "$HOME/kernel/android_device_samsung_gts6l"
           bash fix-symlinks.sh
-
+          
+      - name: Integrar KernelSU-Next (commit fijo, verificado que compila en 4.14)
+        run: |
+          cd "$HOME/kernel/src"
+          # Se fija al commit exacto c81cdf51 en vez de seguir la rama "legacy" a ciegas:
+          # la rama avanzo desde que se probo y agrego codigo (kvcalloc/KSYM_NAME_LEN
+          # en supercall/dispatch.c) que no existe en kernels 4.14. Este commit especifico
+          # SI compila limpio, verificado.
+          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s c81cdf51c3bb606836c6fc9a7cc858053eb0bc62
+          
       - name: Compilar kernel
         run: |
           cd "$HOME/kernel/android_device_samsung_gts6l"
