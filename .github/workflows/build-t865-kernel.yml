@@ -55,14 +55,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: toolchains/proton-clang
-          key: proton-clang- 20210522
+          key: proton-clang-20210522
 
-      - name: Descargar Proton Clang 12 (20210522)
+      - name: Descargar Proton Clang 13 (20210123)
         if: steps.cache-clang.outputs.cache-hit != 'true'
         run: |
           mkdir -p toolchains/proton-clang
           git clone https://github.com/kdrag0n/proton-clang.git \
-            toolchains/proton-clang/proton-clang- 20210522
+            toolchains/proton-clang/proton-clang-20210123
 
       - name: Cache GCC 4.9 (LineageOS 19.1)
         id: cache-gcc
@@ -99,12 +99,7 @@ jobs:
         run: |
           cd "$HOME/kernel/android_device_samsung_gts6l"
           bash fix-symlinks.sh
-          
-      - name: Integrar KernelSU-Next (rama legacy)
-        run: |
-          cd "$HOME/kernel/android_device_samsung_gts6l"
-          curl -LSs "https://raw.githubusercontent.com/KernelSU-Next/KernelSU-Next/next/kernel/setup.sh" | bash -s legacy
-          
+
       - name: Compilar kernel
         run: |
           cd "$HOME/kernel/android_device_samsung_gts6l"
