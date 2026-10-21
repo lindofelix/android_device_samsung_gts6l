@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
-cd /home/claude/work/kernel/src
+cd $HOME/kernel/android_device_samsung_gts6l
 
 export ARCH=arm64
 export KBUILD_BUILD_USER=felix
 export KBUILD_BUILD_HOST=gts6l
 export LOCALVERSION=""
 
-BASE=/home/claude/work
+BASE=$HOME
 CROSS_COMPILE_PREFIX="$BASE/toolchains/gcc-4.9/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9-lineage-19.1/bin/aarch64-linux-android-"
 CLANG_BIN="$BASE/toolchains/proton-clang/proton-clang-20210522/bin/clang"
 CLANG_TRIPLE="aarch64-linux-gnu-"
