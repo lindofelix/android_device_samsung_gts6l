@@ -55,14 +55,14 @@ jobs:
         uses: actions/cache@v4
         with:
           path: toolchains/proton-clang
-          key: proton-clang- 20210123
+          key: proton-clang- 20210522
 
-      - name: Descargar Proton Clang 12 (20210123)
+      - name: Descargar Proton Clang 12 (20210522)
         if: steps.cache-clang.outputs.cache-hit != 'true'
         run: |
           mkdir -p toolchains/proton-clang
           git clone https://github.com/kdrag0n/proton-clang.git \
-            toolchains/proton-clang/proton-clang- 20210123
+            toolchains/proton-clang/proton-clang- 20210522
 
       - name: Cache GCC 4.9 (LineageOS 19.1)
         id: cache-gcc
