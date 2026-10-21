@@ -6949,6 +6949,7 @@ CONFIG_SCHED_KAIR_GLUE=y
 
 # KernelSU Next
 CONFIG_KSU=y
+CONFIG_KSU_MANUAL_SU=y
 
 # --- agregado por pedido explicito (14-oct) ---
 CONFIG_IOSCHED_ZEN=y
