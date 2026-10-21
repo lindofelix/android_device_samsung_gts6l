@@ -1,0 +1,131 @@
+# Workflow de GitHub Actions para compilar el kernel custom T865 (Galaxy Tab S6, SM8150).
+# Replica exactamente el proceso usado para armar las builds anteriores.
+#
+# COMO USARLO:
+# 1. Crea un repo en GitHub con el source del kernel (kernel_t865_src_tar.gz ya extraido)
+#    en la raiz del repo, incluyendo arch/arm64/configs/gts6l_eur_open_defconfig,
+#    run_build_t865_minimal.sh y fix-symlinks.sh (los 3 en la raiz del repo, tal
+#    cual quedaron en esta sesion). fix-symlinks.sh es necesario porque Git suele
+#    aplanar los symlinks del kernel a archivos de texto plano al subirlos.
+# 2. Copia este archivo a .github/workflows/build-t865-kernel.yml en ese repo.
+# 3. Andá a la pestaña "Actions" del repo y corré el workflow manualmente
+#    (o hace push a la rama que configures en el "on:" de abajo).
+# 4. Cuando termine, el boot.img queda en la pestaña "Actions" -> el run -> "Artifacts".
+#
+# SUPUESTOS que hice (ajustalos si tu repo esta organizado distinto):
+# - El source del kernel esta en la RAIZ del repo (no en una subcarpeta).
+# - run_build_t865_minimal.sh y el defconfig ya estan en el repo, tal cual
+#   los armamos en esta sesion (con las modificaciones acumuladas: KernelSU-Next,
+#   schedutil, HZ=300, DM_VERITY activo, etc.)
+# - Los toolchains (Proton Clang 20210522 y GCC 4.9 LineageOS 19.1) se descargan
+#   frescos en cada corrida y se cachean entre corridas para no re-bajar varios GB
+#   cada vez. Si preferis subirlos vos mismo como Release Assets del repo en vez
+#   de descargarlos de internet cada vez, avisame y te adapto el workflow.
+
+name: Build T865 Kernel
+
+on:
+  workflow_dispatch:
+    inputs:
+      razon:
+        description: "Motivo de esta build (opcional, solo para el log)"
+        required: false
+        default: "build manual"
+  # Descomenta esto si queres que compile automatico en cada push a main:
+  # push:
+  #   branches: [ main ]
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Checkout del kernel source
+        uses: actions/checkout@v4
+
+      - name: Instalar dependencias de build
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y git make gcc g++ flex bison bc python3 python3-pip \
+            libssl-dev build-essential zip unzip rsync kmod cpio libncurses-dev \
+            zlib1g-dev bzip2 lz4
+
+      # --- Toolchains: se cachean entre corridas para acelerar builds futuras ---
+      - name: Cache Proton Clang
+        id: cache-clang
+        uses: actions/cache@v4
+        with:
+          path: toolchains/proton-clang
+          key: proton-clang-20210522
+
+      - name: Descargar Proton Clang 13 (20210522)
+        if: steps.cache-clang.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p toolchains/proton-clang
+          git clone https://github.com/kdrag0n/proton-clang.git \
+            toolchains/proton-clang/proton-clang-20210522
+
+      - name: Cache GCC 4.9 (LineageOS 19.1)
+        id: cache-gcc
+        uses: actions/cache@v4
+        with:
+          path: toolchains/gcc-4.9
+          key: gcc49-lineage-19.1
+
+      - name: Descargar GCC 4.9 / binutils (LineageOS 19.1, aarch64)
+        if: steps.cache-gcc.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p toolchains/gcc-4.9
+          git clone --depth=1 -b lineage-19.1 \
+            https://github.com/LineageOS/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9.git \
+            toolchains/gcc-4.9/android_prebuilts_gcc_linux-x86_aarch64_aarch64-linux-android-4.9-lineage-19.1
+
+      # --- Reubicar todo en $HOME, que es lo que el script espera (BASE=/home/felix) ---
+      - name: Acomodar rutas para que matcheen el script
+        run: |
+          mkdir -p "$HOME/kernel" "$HOME/toolchains"
+          cp -r "$GITHUB_WORKSPACE" "$HOME/kernel/android_device_samsung_gts6l"
+          rm -rf "$HOME/kernel/android_device_samsung_gts6l/toolchains"
+          mv toolchains/proton-clang "$HOME/toolchains/"
+          mv toolchains/gcc-4.9 "$HOME/toolchains/"
+          sed -i "s|^cd /home/felix/kernel/android_device_samsung_gts6l|cd $HOME/kernel/android_device_samsung_gts6l|" "$HOME/kernel/android_device_samsung_gts6l/run_build_t865_minimal.sh"
+          sed -i "s|^BASE=/home/felix|BASE=$HOME|" "$HOME/kernel/android_device_samsung_gts6l/run_build_t865_minimal.sh"
+          chmod +x "$HOME/kernel/android_device_samsung_gts6l/run_build_t865_minimal.sh"
+          chmod +x "$HOME/kernel/android_device_samsung_gts6l/arch/arm64/kernel/vdso/gen_vdso_offsets.sh" \
+            "$HOME/kernel/android_device_samsung_gts6l/tools/dtc" \
+            "$HOME/kernel/android_device_samsung_gts6l/scripts/crypto/fips_crypto_integrity.py" \
+            "$HOME/kernel/android_device_samsung_gts6l/scripts/clang-android.sh" 2>/dev/null || true
+
+      - name: Arreglar symlinks rotos por Git
+        run: |
+          cd "$HOME/kernel/android_device_samsung_gts6l"
+          bash fix-symlinks.sh
+
+      - name: Compilar kernel
+        run: |
+          cd "$HOME/kernel/android_device_samsung_gts6l"
+          ./run_build_t865_minimal.sh
+
+      - name: Empaquetar boot.img
+        run: |
+          cd "$HOME/kernel/android_device_samsung_gts6l"
+          cp out/arch/arm64/boot/Image-dtb Image-dtb
+          python3 tools/mkbootimg \
+            --kernel Image-dtb \
+            --base 0x00000000 \
+            --kernel_offset 0x00008000 \
+            --ramdisk_offset 0x00000000 \
+            --tags_offset 0x01e00000 \
+            --pagesize 4096 \
+            --header_version 1 \
+            --board "SRPSC20B006" \
+            --os_version 11.0.0 \
+            --os_patch_level 2024-04 \
+            --cmdline "console=null androidboot.hardware=qcom androidboot.console=ttyMSM0 androidboot.memcg=1 lpm_levels.sleep_disabled=1 video=vfb:640x400,bpp=32,memsize=3072000 msm_rtb.filter=0x237 service_locator.enable=1 swiotlb=2048 androidboot.usbcontroller=a600000.dwc3 firmware_class.path=/vendor/firmware_mnt/image loop.max_part=7" \
+            -o boot.img
+
+      - name: Subir boot.img como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: boot-t865-${{ github.run_number }}
+          path: /home/runner/kernel/android_device_samsung_gts6l/boot.img
+          retention-days: 14
